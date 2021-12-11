@@ -34,6 +34,8 @@ team_t team = {
     /* Second member's email address (leave blank if none) */
     "secret"
 };
+//next fit switch
+#define NEXTFIT
 
 /* single word (4) or double word (8) alignment */
 #define ALIGNMENT 8
@@ -75,7 +77,14 @@ team_t team = {
 //블럭포인터 -> 블럭포인터 - DSIZE : 이전 블럭 푸터 -> GET_SIZE으로 이전 블럭사이즈계산 -> 이전 블럭포인터 반환
 #define PREV_BLKP(bp) ((char *)(bp) - GET_SIZE(((char *)(bp) - DSIZE)))
 
-char * heap_listp;
+//전역변수 
+char * heap_listp = 0;
+#ifdef NEXTFIT
+    char * last_point;
+#endif
+
+
+//함수 목록
 static void *coalesce(void *bp);
 static void *extend_heap(size_t words);
 static void *find_fit(size_t asize);
@@ -95,9 +104,12 @@ int mm_init(void)
     PUT(heap_listp + (3*WSIZE), PACK(0, 1));     /* Epilogue header */
     heap_listp += (2*WSIZE);
     /* Extend the empty heap with a free block of CHUNKSIZE bytes */
-    if (extend_heap(CHUNKSIZE/WSIZE) == NULL)
-        return -1;  
-    return 0;
+    #ifdef NEXTFIT
+        last_point = heap_listp;
+    #endif
+        if (extend_heap(CHUNKSIZE/WSIZE) == NULL)
+            return -1;  
+        return 0;
 }
 
 static void *extend_heap(size_t words){
@@ -185,21 +197,38 @@ static void *coalesce(void *bp){
         PUT(FTRP(NEXT_BLKP(bp)),PACK(size,0));
         bp = PREV_BLKP(bp);
     }
-    return bp;
+    #ifdef NEXTFIT
+        last_point = bp;
+        return bp;
+    #endif
+        return bp;
 }
 
 static void *find_fit(size_t asize){
     char *bp;
-    char temp;
-    for(bp = heap_listp; GET_SIZE(HDRP(bp))>0;bp = NEXT_BLKP(bp)){
-        if (!GET_ALLOC(HDRP(bp)) && (asize <= GET_SIZE(HDRP(bp)))){
-            temp = *bp;
-            * heap_listp = temp;
-            heap_listp = bp;
-            return bp;
+    char *copy_last = last_point; 
+    
+    #ifdef NEXTFIT
+        for(; GET_SIZE(HDRP(last_point))>0;last_point = NEXT_BLKP(last_point)){
+            if (!GET_ALLOC(HDRP(last_point)) && (asize <= GET_SIZE(HDRP(last_point)))){
+                return last_point;
+            }
         }
-    }
-    return NULL;
+        for(last_point = heap_listp; last_point < copy_last;last_point = NEXT_BLKP(last_point)){
+            if (!GET_ALLOC(HDRP(last_point)) && (asize <= GET_SIZE(HDRP(last_point)))){
+                return last_point;
+            }
+        }
+        return NULL;
+    
+    #endif
+        for(bp = heap_listp; GET_SIZE(HDRP(bp))>0;bp = NEXT_BLKP(bp)){
+            if (!GET_ALLOC(HDRP(bp)) && (asize <= GET_SIZE(HDRP(bp)))){
+            
+                return bp;
+            }
+        }
+        return NULL;
 // #endif
 }
 
