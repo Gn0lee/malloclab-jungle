@@ -96,7 +96,7 @@ void *segregated_free_lists[LISTLIMIT];
 static void *coalesce(void *bp);
 static void *extend_heap(size_t words);
 static void *find_fit(size_t asize);
-static void place(void *bp, size_t asize);
+static void *place(void *bp, size_t asize);
 static void insert_node(void *ptr, size_t size);
 static void delete_node(void *ptr);
 
@@ -121,7 +121,7 @@ int mm_init(void)
     heap_listp += (2*WSIZE);
     /* Extend the empty heap with a free block of CHUNKSIZE bytes */
     
-    if (extend_heap(CHUNKSIZE/WSIZE) == NULL)
+    if (extend_heap(INITCHUNKSIZE) == NULL)
         return -1;  
     return 0;
 }
@@ -250,14 +250,15 @@ void *mm_malloc(size_t size)
     
     /* Search the free list for a fit */
     if ((bp = find_fit(asize)) != NULL) {
-        place(bp, asize);
+        bp = place(bp, asize);
         return bp; 
     }
     /* No fit found. Get more memory and place the block */
     extendsize = MAX(asize,CHUNKSIZE);
     if ((bp = extend_heap(extendsize/WSIZE)) == NULL)
         return NULL;
-    place(bp, asize);
+    
+    bp = place(bp, asize);
     return bp;
 }
 
@@ -327,23 +328,31 @@ static void *find_fit(size_t asize){
     return NULL;
 }
 
-static void place(void *bp, size_t asize){
+static void *place(void *bp, size_t asize){
     size_t csize = GET_SIZE(HDRP(bp));
-
+    size_t remainder = csize - asize;
     delete_node(bp);
 
-    if ((csize-asize)>=(2*DSIZE)){
-        PUT(HDRP(bp),PACK(asize,1));
-        PUT(FTRP(bp),PACK(asize,1));
-        bp = NEXT_BLKP(bp);
-        PUT(HDRP(bp),PACK(csize-asize,0));
-        PUT(FTRP(bp),PACK(csize-asize,0));
-        insert_node(bp,(csize-asize));
-    }
-    else{
+    if (remainder <= 2*DSIZE){
         PUT(HDRP(bp),PACK(csize,1));
         PUT(FTRP(bp),PACK(csize,1));
     }
+    else if(asize >= 100){
+        PUT(HDRP(bp),PACK(remainder,0));
+        PUT(FTRP(bp),PACK(remainder,0));
+        PUT(HDRP(NEXT_BLKP(bp)),PACK(asize,1));
+        PUT(FTRP(NEXT_BLKP(bp)),PACK(asize,1));
+        insert_node(bp,remainder);
+        return NEXT_BLKP(bp);
+    }
+    else{
+        PUT(HDRP(bp),PACK(asize,1));
+        PUT(FTRP(bp),PACK(asize,1));
+        PUT(HDRP(NEXT_BLKP(bp)),PACK(remainder,0));
+        PUT(FTRP(NEXT_BLKP(bp)),PACK(remainder,0));
+        insert_node(NEXT_BLKP(bp),remainder);
+    }
+    return bp;
 }
 
 /*
