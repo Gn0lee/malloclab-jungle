@@ -92,7 +92,7 @@ void *segregated_free_lists[LISTLIMIT];
 static void *coalesce(void *bp);
 static void *extend_heap(size_t words);
 static void *find_fit(size_t asize);
-static void place(void *bp, size_t asize);
+static void *place(void *bp, size_t asize);
 static void insert_node(void *ptr, size_t size);
 static void delete_node(void *ptr);
 
@@ -138,11 +138,12 @@ static void *extend_heap(size_t words){
     return coalesce(bp);
 }
 
+
 static void insert_node(void *ptr, size_t size) {
     int list = 0;
     void *search_ptr = ptr; 
     void *insert_ptr = NULL; //실제 노드가 삽입되는 위치
-    
+
     // Select segregated list 
     while ((list < LISTLIMIT - 1) && (size > 1)) {
         size >>= 1;
@@ -185,8 +186,8 @@ static void insert_node(void *ptr, size_t size) {
 }
 
 static void delete_node(void *ptr) {
-    int list = 0;
     size_t size = GET_SIZE(HDRP(ptr));
+    int list = 0;
     
     // Select segregated list 
     while ((list < LISTLIMIT - 1) && (size > 1)) {
@@ -243,17 +244,17 @@ void *mm_malloc(size_t size)
     else
         asize = DSIZE * ((size + (DSIZE) + (DSIZE-1)) / DSIZE);
     
-    
-    /* Search the free list for a fit */
+    /* Search the free list for a fit */ 
     if ((bp = find_fit(asize)) != NULL) {
-        place(bp, asize);
+        bp = place(bp, asize);
         return bp; 
     }
     /* No fit found. Get more memory and place the block */
     extendsize = MAX(asize,CHUNKSIZE);
     if ((bp = extend_heap(extendsize/WSIZE)) == NULL)
         return NULL;
-    place(bp, asize);
+    
+    bp = place(bp, asize);
     return bp;
 }
 
@@ -305,7 +306,7 @@ static void *find_fit(size_t asize){
     size_t searchsize = asize;
     // Search for free block in segregated list
     while (list < LISTLIMIT) {
-        if ((list == LISTLIMIT - 1) || ((searchsize <= 1) && (segregated_free_lists[list] != NULL))) {
+        if ((list == LISTLIMIT - 1) || ((searchsize <= 1) &&(segregated_free_lists[list] != NULL))) {
             bp = segregated_free_lists[list];
             // Ignore blocks that are too small or marked with the reallocation bit
             while ((bp != NULL) && ((asize > GET_SIZE(HDRP(bp)))))
@@ -315,7 +316,6 @@ static void *find_fit(size_t asize){
             if (bp != NULL)
                 return bp;
         }
-        
         searchsize >>= 1;
         list++;
     }
@@ -323,23 +323,92 @@ static void *find_fit(size_t asize){
     return NULL;
 }
 
-static void place(void *bp, size_t asize){
+static void *place(void *bp, size_t asize){
     size_t csize = GET_SIZE(HDRP(bp));
-
+    size_t remainder = csize - asize;
     delete_node(bp);
 
+    // if (remainder <= 2*DSIZE){
+    //     PUT(HDRP(bp),PACK(csize,1));
+    //     PUT(FTRP(bp),PACK(csize,1));
+    // }
+    // else{
+    //     if(!GET_ALLOC(NEXT_BLKP(bp)) && !GET_ALLOC(PREV_BLKP(bp))){
+    //         if(GET_SIZE(NEXT_BLKP(bp)) > GET_SIZE(PREV_BLKP(bp))){
+    //             PUT(HDRP(bp),PACK(asize,1));
+    //             PUT(FTRP(bp),PACK(asize,1));
+    //             PUT(HDRP(NEXT_BLKP(bp)),PACK(remainder,0));
+    //             PUT(FTRP(NEXT_BLKP(bp)),PACK(remainder,0));
+    //             insert_node(NEXT_BLKP(bp),remainder);
+    //         }
+    //         else{
+    //             PUT(HDRP(bp),PACK(remainder,0));
+    //             PUT(FTRP(bp),PACK(remainder,0));
+    //             PUT(HDRP(NEXT_BLKP(bp)),PACK(asize,1));
+    //             PUT(FTRP(NEXT_BLKP(bp)),PACK(asize,1));
+    //             insert_node(bp,remainder);
+    //             return NEXT_BLKP(bp);
+    //         }
+    //     }
+    //     else if (!GET_ALLOC(NEXT_BLKP(bp)) || !GET_ALLOC(PREV_BLKP(bp))){
+    //         if(!GET_ALLOC(NEXT_BLKP(bp))){
+    //             PUT(HDRP(bp),PACK(asize,1));
+    //             PUT(FTRP(bp),PACK(asize,1));
+    //             PUT(HDRP(NEXT_BLKP(bp)),PACK(remainder,0));
+    //             PUT(FTRP(NEXT_BLKP(bp)),PACK(remainder,0));
+    //             insert_node(NEXT_BLKP(bp),remainder);
+    //         }
+    //         else{
+    //             PUT(HDRP(bp),PACK(remainder,0));
+    //             PUT(FTRP(bp),PACK(remainder,0));
+    //             PUT(HDRP(NEXT_BLKP(bp)),PACK(asize,1));
+    //             PUT(FTRP(NEXT_BLKP(bp)),PACK(asize,1));
+    //             insert_node(bp,remainder);
+    //             return NEXT_BLKP(bp);
+    //         }
+    //     }
+    //     else{
+    //         PUT(HDRP(bp),PACK(asize,1));
+    //         PUT(FTRP(bp),PACK(asize,1));
+    //         PUT(HDRP(NEXT_BLKP(bp)),PACK(remainder,0));
+    //         PUT(FTRP(NEXT_BLKP(bp)),PACK(remainder,0));
+    //         insert_node(NEXT_BLKP(bp),remainder);
+    //     }
+    // }
+    // return bp;
+
+    // if (remainder <= 2*DSIZE){
+    //     PUT(HDRP(bp),PACK(csize,1));
+    //     PUT(FTRP(bp),PACK(csize,1));
+    // }
+    // else if(asize >= 100){
+    //     PUT(HDRP(bp),PACK(remainder,0));
+    //     PUT(FTRP(bp),PACK(remainder,0));
+    //     PUT(HDRP(NEXT_BLKP(bp)),PACK(asize,1));
+    //     PUT(FTRP(NEXT_BLKP(bp)),PACK(asize,1));
+    //     insert_node(bp,remainder);
+    //     return NEXT_BLKP(bp);
+    // }
+    // else{
+    //     PUT(HDRP(bp),PACK(asize,1));
+    //     PUT(FTRP(bp),PACK(asize,1));
+    //     PUT(HDRP(NEXT_BLKP(bp)),PACK(remainder,0));
+    //     PUT(FTRP(NEXT_BLKP(bp)),PACK(remainder,0));
+    //     insert_node(NEXT_BLKP(bp),remainder);
+    // }
     if ((csize-asize)>=(2*DSIZE)){
         PUT(HDRP(bp),PACK(asize,1));
         PUT(FTRP(bp),PACK(asize,1));
-        bp = NEXT_BLKP(bp);
-        PUT(HDRP(bp),PACK(csize-asize,0));
-        PUT(FTRP(bp),PACK(csize-asize,0));
-        insert_node(bp,(csize-asize));
+        PUT(HDRP(NEXT_BLKP(bp)),PACK(csize-asize,0));
+        PUT(FTRP(NEXT_BLKP(bp)),PACK(csize-asize,0));
+        insert_node(NEXT_BLKP(bp),(csize-asize));
     }
     else{
         PUT(HDRP(bp),PACK(csize,1));
         PUT(FTRP(bp),PACK(csize,1));
     }
+
+    return bp;
 }
 
 /*
@@ -360,6 +429,21 @@ void mm_free(void *bp)
 /*
  * mm_realloc - Implemented simply in terms of mm_malloc and mm_free
  */
+
+/*
+ * mm_realloc - implementaed with optimzation on every case:
+ * First check edge cases: ptr = null, size = 0, oldptr size = new size
+ * If none of those trivial cases, we consider 3 special cases:
+ * Case 1: If we are shrinking (new size requested < size of oldptr)
+ *         We can shrink the size of oldptr, update header footer,
+ *         and free & coalesce the remaining free space 
+ * If we are getting a larger size, we consider case 2 & 3.
+ * Case 2: Check in-place if next block in memory after ptr is free
+ * 	   and can fit the new size, if yes, then combine the two
+ * Case 3: Last option, to allocate a new block of size by calling
+ *   	   mm_malloc
+ */
+
 void *mm_realloc(void *ptr, size_t size)
 {
     void *oldptr = ptr;
@@ -377,3 +461,87 @@ void *mm_realloc(void *ptr, size_t size)
     mm_free(oldptr);
     return newptr;
 }
+
+// void *mm_realloc(void *ptr, size_t size)
+// {
+//     void *oldptr = ptr;
+//     void *newptr;
+//     void * nextptr;
+//     size_t copySize, asize, nsize;
+   
+//     /*if size = 0, we want to free ptr*/
+//     if (size == 0) {
+//       mm_free(oldptr);
+//       return NULL;
+//     }   
+
+//     /*if oldptr is null, we want to call malloc(size) */
+//     if (oldptr == NULL) {
+//       return mm_malloc(size);
+//     }
+//     asize = ALIGN(size);
+
+//     /*realloc ptr with size*/
+//     copySize =GET_SIZE(HDRP(oldptr))-DSIZE;
+  
+//     if (asize == copySize) {
+//       return oldptr;
+//     }
+
+//     /*Case 1: */
+//     /*if size < oldptr size, the oldptr can hold the new size*/
+//     if (asize < copySize) {
+//       //if the remaining space is not enough to store anything, return oldptr
+//       if (copySize - asize - DSIZE <= DSIZE)
+// 	    return oldptr;
+//       PUT(HDRP(oldptr), PACK(asize + DSIZE, 1));
+//       PUT(FTRP(oldptr), PACK(asize + DSIZE, 1));
+//       newptr = oldptr;
+//       oldptr = NEXT_BLKP(newptr);
+//       /*free the space emptied*/
+//       PUT(HDRP(oldptr), PACK(copySize - asize, 0));
+//       PUT(FTRP(oldptr), PACK(copySize - asize, 0));
+//       insert_node(oldptr, GET_SIZE(HDRP(oldptr)));
+//       coalesce(oldptr);
+//       return newptr; 
+//     }
+
+//     /*Case 2: */
+//     /*if size > oldptr size, we need to either find a new block, or take the space of next blk*/
+//     nextptr = NEXT_BLKP(oldptr);
+//     /*now check if the next block after oldptr block, in-place, is free*/
+//     if (nextptr != NULL && !GET_ALLOC(HDRP(nextptr))) {
+//        nsize = GET_SIZE(HDRP(nextptr));	
+//       if (nsize + copySize >= asize) {
+// 	    delete_node(nextptr);
+// 	if (nsize + copySize - asize <= DSIZE) {
+//   	    //if remaining space in next block cannot hold any value, just use it all
+//   	    PUT(HDRP(oldptr), PACK(copySize + DSIZE + nsize, 1));
+//         PUT(FTRP(oldptr), PACK(copySize + DSIZE + nsize, 1));
+//         return oldptr;
+// 	}
+//  	else{    
+//          //coalecse the reamming free sapce after
+//         PUT(HDRP(oldptr), PACK(asize + DSIZE, 1));
+//         PUT(FTRP(oldptr), PACK(asize + DSIZE, 1));
+// 	    newptr = oldptr;
+// 	    oldptr = NEXT_BLKP(newptr);
+// 	    PUT(HDRP(oldptr), PACK(copySize + nsize - asize, 0));
+//       	PUT(FTRP(oldptr), PACK(copySize + nsize - asize, 0));
+//       	insert_node(oldptr, GET_SIZE(HDRP(oldptr)));
+//       	coalesce(oldptr);
+//       	return newptr;
+// 	}
+//       } 
+//     }
+
+//     /*Case 3: */
+//     /*now we have our last option, which is to allocate a completely new block to fit the size*/ 
+//     newptr = mm_malloc(size); 
+//     if (newptr == NULL)
+//       return NULL;
+//     /*copy over the data from oldptr*/
+//     memcpy(newptr, oldptr, copySize);
+//     mm_free(oldptr);
+//     return newptr;
+// }
