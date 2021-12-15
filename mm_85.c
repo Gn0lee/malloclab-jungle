@@ -80,13 +80,9 @@ team_t team = {
 //포인터 p가 가르키는 메모리에 포인터 ptr을 입력
 #define SET_PTR(p, ptr) (*(unsigned int *)(p) = (unsigned int)(ptr))
 
-//가용 블럭 리스트에서 next 와 prev의 포인터를 반환
-#define NEXT_PTR(ptr) ((char *)(ptr))
-#define PREV_PTR(ptr) ((char *)(ptr) + WSIZE)
-
 //segregated list 내에서 next 와 prev의 포인터를 반환
 #define NEXT(ptr) (*(char **)(ptr))
-#define PREV(ptr) (*(char **)(PREV_PTR(ptr)))
+#define PREV(ptr) (*(char **)(ptr + WSIZE))
 
 //전역변수 
 char *heap_listp = 0;
@@ -163,24 +159,24 @@ static void insert_node(void *ptr, size_t size) {
     // Set NEXT and PREV 
     if (search_ptr != NULL) {
         if (insert_ptr != NULL) {
-            SET_PTR(NEXT_PTR(ptr), search_ptr);
-            SET_PTR(PREV_PTR(search_ptr), ptr);
-            SET_PTR(PREV_PTR(ptr), insert_ptr);
-            SET_PTR(NEXT_PTR(insert_ptr), ptr);
+            NEXT(ptr) = PREV(search_ptr);
+            PREV(search_ptr) = ptr;
+            PREV(ptr) = insert_ptr;
+            NEXT(insert_ptr) = ptr;
         } else {
-            SET_PTR(NEXT_PTR(ptr), search_ptr);
-            SET_PTR(PREV_PTR(search_ptr), ptr);
-            SET_PTR(PREV_PTR(ptr), NULL);
+            NEXT(ptr) = search_ptr;
+            PREV(search_ptr)= ptr;
+            PREV(ptr) = NULL;
             segregated_free_lists[list] = ptr;
         }
     } else {
         if (insert_ptr != NULL) {
-            SET_PTR(NEXT_PTR(ptr), NULL);
-            SET_PTR(PREV_PTR(ptr), insert_ptr);
-            SET_PTR(NEXT_PTR(insert_ptr), ptr);
+            NEXT(ptr) =  NULL;
+            PREV(ptr) = insert_ptr;
+            NEXT(insert_ptr) = ptr;
         } else {
-            SET_PTR(NEXT_PTR(ptr), NULL);
-            SET_PTR(PREV_PTR(ptr), NULL);
+            NEXT(ptr) = NULL;
+            PREV(ptr) = NULL;
             segregated_free_lists[list] = ptr;
         }
     }
@@ -200,15 +196,15 @@ static void delete_node(void *ptr) {
     
     if (NEXT(ptr) != NULL) {
         if (PREV(ptr) != NULL) {
-            SET_PTR(PREV_PTR(NEXT(ptr)), PREV(ptr));
-            SET_PTR(NEXT_PTR(PREV(ptr)), NEXT(ptr));
+            PREV(NEXT(ptr)) = PREV(ptr);
+            NEXT(PREV(ptr)) = NEXT(ptr);
         } else {
-            SET_PTR(PREV_PTR(NEXT(ptr)), NULL);
+            PREV(NEXT(ptr)) = NULL;
             segregated_free_lists[list] = NEXT(ptr);
         }
     } else {
         if (PREV(ptr) != NULL) {
-            SET_PTR(NEXT_PTR(PREV(ptr)), NULL);
+            NEXT(PREV(ptr)) = NULL;
         } else {
             segregated_free_lists[list] = NULL;
         }
