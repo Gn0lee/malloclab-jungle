@@ -328,54 +328,54 @@ static void *place(void *bp, size_t asize){
     size_t remainder = csize - asize;
     delete_node(bp);
 
-    // if (remainder <= 2*DSIZE){
-    //     PUT(HDRP(bp),PACK(csize,1));
-    //     PUT(FTRP(bp),PACK(csize,1));
-    // }
-    // else{
-    //     if(!GET_ALLOC(NEXT_BLKP(bp)) && !GET_ALLOC(PREV_BLKP(bp))){
-    //         if(GET_SIZE(NEXT_BLKP(bp)) > GET_SIZE(PREV_BLKP(bp))){
-    //             PUT(HDRP(bp),PACK(asize,1));
-    //             PUT(FTRP(bp),PACK(asize,1));
-    //             PUT(HDRP(NEXT_BLKP(bp)),PACK(remainder,0));
-    //             PUT(FTRP(NEXT_BLKP(bp)),PACK(remainder,0));
-    //             insert_node(NEXT_BLKP(bp),remainder);
-    //         }
-    //         else{
-    //             PUT(HDRP(bp),PACK(remainder,0));
-    //             PUT(FTRP(bp),PACK(remainder,0));
-    //             PUT(HDRP(NEXT_BLKP(bp)),PACK(asize,1));
-    //             PUT(FTRP(NEXT_BLKP(bp)),PACK(asize,1));
-    //             insert_node(bp,remainder);
-    //             return NEXT_BLKP(bp);
-    //         }
-    //     }
-    //     else if (!GET_ALLOC(NEXT_BLKP(bp)) || !GET_ALLOC(PREV_BLKP(bp))){
-    //         if(!GET_ALLOC(NEXT_BLKP(bp))){
-    //             PUT(HDRP(bp),PACK(asize,1));
-    //             PUT(FTRP(bp),PACK(asize,1));
-    //             PUT(HDRP(NEXT_BLKP(bp)),PACK(remainder,0));
-    //             PUT(FTRP(NEXT_BLKP(bp)),PACK(remainder,0));
-    //             insert_node(NEXT_BLKP(bp),remainder);
-    //         }
-    //         else{
-    //             PUT(HDRP(bp),PACK(remainder,0));
-    //             PUT(FTRP(bp),PACK(remainder,0));
-    //             PUT(HDRP(NEXT_BLKP(bp)),PACK(asize,1));
-    //             PUT(FTRP(NEXT_BLKP(bp)),PACK(asize,1));
-    //             insert_node(bp,remainder);
-    //             return NEXT_BLKP(bp);
-    //         }
-    //     }
-    //     else{
-    //         PUT(HDRP(bp),PACK(asize,1));
-    //         PUT(FTRP(bp),PACK(asize,1));
-    //         PUT(HDRP(NEXT_BLKP(bp)),PACK(remainder,0));
-    //         PUT(FTRP(NEXT_BLKP(bp)),PACK(remainder,0));
-    //         insert_node(NEXT_BLKP(bp),remainder);
-    //     }
-    // }
-    // return bp;
+    if (remainder <= 2*DSIZE){
+        PUT(HDRP(bp),PACK(csize,1));
+        PUT(FTRP(bp),PACK(csize,1));
+    }
+    else{
+        if(!GET_ALLOC(NEXT_BLKP(bp)) && !GET_ALLOC(PREV_BLKP(bp))){
+            if(GET_SIZE(NEXT_BLKP(bp)) > GET_SIZE(PREV_BLKP(bp))){
+                PUT(HDRP(bp),PACK(asize,1));
+                PUT(FTRP(bp),PACK(asize,1));
+                PUT(HDRP(NEXT_BLKP(bp)),PACK(remainder,0));
+                PUT(FTRP(NEXT_BLKP(bp)),PACK(remainder,0));
+                insert_node(NEXT_BLKP(bp),remainder);
+            }
+            else{
+                PUT(HDRP(bp),PACK(remainder,0));
+                PUT(FTRP(bp),PACK(remainder,0));
+                PUT(HDRP(NEXT_BLKP(bp)),PACK(asize,1));
+                PUT(FTRP(NEXT_BLKP(bp)),PACK(asize,1));
+                insert_node(bp,remainder);
+                return NEXT_BLKP(bp);
+            }
+        }
+        else if (!GET_ALLOC(NEXT_BLKP(bp)) || !GET_ALLOC(PREV_BLKP(bp))){
+            if(!GET_ALLOC(NEXT_BLKP(bp))){
+                PUT(HDRP(bp),PACK(asize,1));
+                PUT(FTRP(bp),PACK(asize,1));
+                PUT(HDRP(NEXT_BLKP(bp)),PACK(remainder,0));
+                PUT(FTRP(NEXT_BLKP(bp)),PACK(remainder,0));
+                insert_node(NEXT_BLKP(bp),remainder);
+            }
+            else{
+                PUT(HDRP(bp),PACK(remainder,0));
+                PUT(FTRP(bp),PACK(remainder,0));
+                PUT(HDRP(NEXT_BLKP(bp)),PACK(asize,1));
+                PUT(FTRP(NEXT_BLKP(bp)),PACK(asize,1));
+                insert_node(bp,remainder);
+                return NEXT_BLKP(bp);
+            }
+        }
+        else{
+            PUT(HDRP(bp),PACK(asize,1));
+            PUT(FTRP(bp),PACK(asize,1));
+            PUT(HDRP(NEXT_BLKP(bp)),PACK(remainder,0));
+            PUT(FTRP(NEXT_BLKP(bp)),PACK(remainder,0));
+            insert_node(NEXT_BLKP(bp),remainder);
+        }
+    }
+    return bp;
 
     // if (remainder <= 2*DSIZE){
     //     PUT(HDRP(bp),PACK(csize,1));
